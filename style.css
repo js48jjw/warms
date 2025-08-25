@@ -1,0 +1,43 @@
+body {
+    margin: 0;
+    padding: 0;
+    background: #0a0a0a;
+    color: #eee;
+    font-family: 'Orbitron', sans-serif; /* A futuristic font */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+.title {
+    font-size: 50px;
+    font-weight: bold;
+    margin-bottom: 20px;
+    text-transform: uppercase;
+    color: #00ffde;
+    text-shadow: 0 0 10px #00ffde, 0 0 20px #00ffde, 0 0 30px #00ffde;
+}
+
+.game-container {
+    position: relative;
+    border: 3px solid #00ffde;
+    border-radius: 10px;
+    box-shadow: 0 0 20px #00ffde, inset 0 0 10px #00ffde;
+    background-color: #000;
+}
+
+#gameCanvas {
+    background-color: transparent;
+}
+
+.controls {
+    margin-top: 15px;
+    font-size: 16px;
+    color: #aaa;
+    text-align: center;
+}
+
+/* Import futuristic font */
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
