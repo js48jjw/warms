@@ -58,12 +58,7 @@ body {
     right: 16px;
 }
 
-/* Responsive design for ads */
-@media (max-width: 1200px) {
-    .ad-container {
-        display: none;
-    }
-}
+
 
 /* Import futuristic font */
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
