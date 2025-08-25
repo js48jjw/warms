@@ -1,7 +1,7 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
-const gridSize = 20;
+const gridSize = 30;
 let snake = [{ x: 10, y: 10 }];
 let food = {};
 let score = 0;
@@ -9,6 +9,9 @@ let direction = 'right';
 let changingDirection = false;
 let gameRunning = true;
 let particles = [];
+let hue = 0;
+let gameTick = 0;
+const moveSpeed = 6; // 60fps에서 6프레임마다 움직임 (초당 10회)
 
 // TOP3 기록 저장을 위한 변수
 let topScores = JSON.parse(localStorage.getItem('wormGameTopScores')) || [];
@@ -44,7 +47,7 @@ function createFood() {
 }
 
 function drawGrid() {
-    ctx.strokeStyle = 'rgba(0, 255, 222, 0.1)';
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
     for (let x = 0; x < canvas.width; x += gridSize) {
         ctx.beginPath();
         ctx.moveTo(x, 0);
@@ -61,48 +64,101 @@ function drawGrid() {
 
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    drawGrid();
+    // drawGrid(); // Grid removed for a clean background
+    hue++;
 
+    // Draw connections
+    for (let i = 1; i < snake.length; i++) {
+        const prev = snake[i-1];
+        const curr = snake[i];
+        
+        if (score === 0) {
+            ctx.fillStyle = 'white';
+            ctx.shadowColor = 'white';
+        } else {
+            const segmentHue = (hue + (i-1) * 10) % 360;
+            ctx.fillStyle = `hsl(${segmentHue}, 100%, 50%)`;
+            ctx.shadowColor = `hsl(${segmentHue}, 100%, 50%)`;
+        }
+        ctx.shadowBlur = 15;
+
+        const x1 = prev.x * gridSize + gridSize / 2;
+        const y1 = prev.y * gridSize + gridSize / 2;
+        const x2 = curr.x * gridSize + gridSize / 2;
+        const y2 = curr.y * gridSize + gridSize / 2;
+
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.lineWidth = gridSize;
+        ctx.strokeStyle = ctx.fillStyle;
+        ctx.stroke();
+    }
+
+    // Draw segments (circles)
     for (let i = 0; i < snake.length; i++) {
         const segment = snake[i];
-        const gradient = ctx.createLinearGradient(segment.x * gridSize, segment.y * gridSize, (segment.x + 1) * gridSize, (segment.y + 1) * gridSize);
-        if (i === 0) {
-            gradient.addColorStop(0, '#00ffde');
-            gradient.addColorStop(1, '#00aaff');
+        if (score === 0) {
+            ctx.fillStyle = 'white';
+            ctx.shadowColor = 'white';
         } else {
-            gradient.addColorStop(0, '#00c8a0');
-            gradient.addColorStop(1, '#0088aa');
+            const segmentHue = (hue + i * 10) % 360;
+            ctx.fillStyle = `hsl(${segmentHue}, 100%, 50%)`;
+            ctx.shadowColor = `hsl(${segmentHue}, 100%, 50%)`;
         }
-        ctx.fillStyle = gradient;
-        ctx.shadowColor = '#00ffde';
-        ctx.shadowBlur = 10;
-        ctx.fillRect(segment.x * gridSize, segment.y * gridSize, gridSize, gridSize);
+        ctx.shadowBlur = 15;
+        ctx.beginPath();
+        ctx.arc(segment.x * gridSize + gridSize / 2, segment.y * gridSize + gridSize / 2, gridSize / 2, 0, 2 * Math.PI);
+        ctx.fill();
         ctx.shadowBlur = 0;
+
+        // Draw eyes on head
         if (i === 0) {
-            ctx.fillStyle = 'black';
-            const eyeSize = gridSize / 5;
+            const eyeSize = gridSize / 4;
+            const pupilSize = gridSize / 8;
             let eye1_x, eye1_y, eye2_x, eye2_y;
+
+            const headX = segment.x * gridSize + gridSize / 2;
+            const headY = segment.y * gridSize + gridSize / 2;
+
             switch (direction) {
                 case 'up':
-                    eye1_x = segment.x * gridSize + eyeSize; eye1_y = segment.y * gridSize + eyeSize;
-                    eye2_x = (segment.x + 1) * gridSize - 2 * eyeSize; eye2_y = segment.y * gridSize + eyeSize;
+                    eye1_x = headX - eyeSize;
+                    eye1_y = headY - eyeSize;
+                    eye2_x = headX + eyeSize;
+                    eye2_y = headY - eyeSize;
                     break;
                 case 'down':
-                    eye1_x = segment.x * gridSize + eyeSize; eye1_y = (segment.y + 1) * gridSize - 2 * eyeSize;
-                    eye2_x = (segment.x + 1) * gridSize - 2 * eyeSize; eye2_y = (segment.y + 1) * gridSize - 2 * eyeSize;
+                    eye1_x = headX - eyeSize;
+                    eye1_y = headY + eyeSize;
+                    eye2_x = headX + eyeSize;
+                    eye2_y = headY + eyeSize;
                     break;
                 case 'left':
-                    eye1_x = segment.x * gridSize + eyeSize; eye1_y = segment.y * gridSize + eyeSize;
-                    eye2_x = segment.x * gridSize + eyeSize; eye2_y = (segment.y + 1) * gridSize - 2 * eyeSize;
+                    eye1_x = headX - eyeSize;
+                    eye1_y = headY - eyeSize;
+                    eye2_x = headX - eyeSize;
+                    eye2_y = headY + eyeSize;
                     break;
                 case 'right':
-                    eye1_x = (segment.x + 1) * gridSize - 2 * eyeSize; eye1_y = segment.y * gridSize + eyeSize;
-                    eye2_x = (segment.x + 1) * gridSize - 2 * eyeSize; eye2_y = (segment.y + 1) * gridSize - 2 * eyeSize;
+                    eye1_x = headX + eyeSize;
+                    eye1_y = headY - eyeSize;
+                    eye2_x = headX + eyeSize;
+                    eye2_y = headY + eyeSize;
                     break;
             }
+            // Sclera (white part)
+            ctx.fillStyle = 'white';
             ctx.beginPath();
             ctx.arc(eye1_x, eye1_y, eyeSize, 0, 2 * Math.PI);
             ctx.arc(eye2_x, eye2_y, eyeSize, 0, 2 * Math.PI);
+            ctx.fill();
+
+            // Pupil (black part)
+            ctx.fillStyle = 'black';
+            ctx.beginPath();
+            ctx.arc(eye1_x, eye1_y, pupilSize, 0, 2 * Math.PI);
+            ctx.arc(eye2_x, eye2_y, pupilSize, 0, 2 * Math.PI);
             ctx.fill();
         }
     }
@@ -139,6 +195,12 @@ function createParticles(x, y) {
 
 function update() {
     if (!gameRunning) return;
+    gameTick++;
+    if (gameTick % moveSpeed !== 0) {
+        draw(); // 화면은 계속 그림
+        return;
+    }
+
     changingDirection = false;
     const head = { x: snake[0].x, y: snake[0].y };
     switch (direction) {
@@ -171,13 +233,10 @@ function checkCollision(head) {
 
 function gameOver() {
     gameRunning = false;
-
-    // 점수 저장
     topScores.push(score);
     topScores.sort((a, b) => b - a);
     topScores = topScores.slice(0, 3);
     localStorage.setItem('wormGameTopScores', JSON.stringify(topScores));
-
     ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = '#ff0055';
@@ -187,12 +246,9 @@ function gameOver() {
     ctx.shadowBlur = 20;
     ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2 - 100);
     ctx.shadowBlur = 0;
-
     ctx.fillStyle = 'white';
     ctx.font = '20px Orbitron';
     ctx.fillText(`FINAL SCORE: ${score}`, canvas.width / 2, canvas.height / 2 - 50);
-
-    // TOP3 점수 표시
     ctx.font = '24px Orbitron';
     ctx.fillStyle = '#00ffde';
     ctx.fillText('TOP 3 SCORES', canvas.width / 2, canvas.height / 2);
@@ -202,7 +258,6 @@ function gameOver() {
         const scoreText = `${rank}. ${topScores[i]}`;
         ctx.fillText(scoreText, canvas.width / 2, canvas.height / 2 + 30 + i * 25);
     }
-
     ctx.fillStyle = 'white';
     ctx.font = '20px Orbitron';
     ctx.fillText('Press Enter to Restart', canvas.width / 2, canvas.height / 2 + 120);
@@ -214,18 +269,24 @@ function restartGame() {
     direction = 'right';
     gameRunning = true;
     particles = [];
+    hue = 0;
+    gameTick = 0;
     createFood();
     main();
 }
 
 document.addEventListener('keydown', e => {
     if (changingDirection) return;
-    changingDirection = true;
     const keyPressed = e.key;
-    if ((keyPressed === 'ArrowUp' || keyPressed.toLowerCase() === 'w') && direction !== 'down') direction = 'up';
-    if ((keyPressed === 'ArrowDown' || keyPressed.toLowerCase() === 's') && direction !== 'up') direction = 'down';
-    if ((keyPressed === 'ArrowLeft' || keyPressed.toLowerCase() === 'a') && direction !== 'right') direction = 'left';
-    if ((keyPressed === 'ArrowRight' || keyPressed.toLowerCase() === 'd') && direction !== 'left') direction = 'right';
+    let newDirection = direction;
+    if ((keyPressed === 'ArrowUp' || keyPressed.toLowerCase() === 'w') && direction !== 'down') newDirection = 'up';
+    if ((keyPressed === 'ArrowDown' || keyPressed.toLowerCase() === 's') && direction !== 'up') newDirection = 'down';
+    if ((keyPressed === 'ArrowLeft' || keyPressed.toLowerCase() === 'a') && direction !== 'right') newDirection = 'left';
+    if ((keyPressed === 'ArrowRight' || keyPressed.toLowerCase() === 'd') && direction !== 'left') newDirection = 'right';
+    if (newDirection !== direction) {
+        direction = newDirection;
+        changingDirection = true;
+    }
     if (!gameRunning && keyPressed === 'Enter') restartGame();
 });
 
@@ -234,7 +295,7 @@ function main() {
         setTimeout(() => {
             requestAnimationFrame(main);
             update();
-        }, 1000 / 15);
+        }, 1000 / 60); // 60 FPS for smooth rendering
     }
 }
 

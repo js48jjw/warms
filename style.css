@@ -9,6 +9,7 @@ body {
     justify-content: center;
     align-items: center;
     min-height: 100vh;
+    overflow-x: hidden; /* Prevent horizontal scrollbar caused by ads */
 }
 
 .title {
@@ -22,6 +23,7 @@ body {
 
 .game-container {
     position: relative;
+    z-index: 100; /* Make sure game is above ads */
     border: 3px solid #00ffde;
     border-radius: 10px;
     box-shadow: 0 0 20px #00ffde, inset 0 0 10px #00ffde;
@@ -37,6 +39,30 @@ body {
     font-size: 16px;
     color: #aaa;
     text-align: center;
+}
+
+/* Ad container styles */
+.ad-container {
+    position: fixed;
+    top: 30px;
+    width: 160px;
+    height: 600px;
+    z-index: 10;
+}
+
+.left-ad {
+    left: 10px;
+}
+
+.right-ad {
+    right: 16px;
+}
+
+/* Responsive design for ads */
+@media (max-width: 1200px) {
+    .ad-container {
+        display: none;
+    }
 }
 
 /* Import futuristic font */
